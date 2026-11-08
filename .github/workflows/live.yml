@@ -1,0 +1,44 @@
+name: LIVE – wykonanie zatwierdzonego planu
+run-name: "${{ inputs.rodzaj }} | plan ${{ inputs.plan_sha256 }} | pozycji ${{ inputs.liczba_pozycji }} | kod ${{ inputs.kod_sha }}"
+# Uruchamia WYŁĄCZNIE Kaj (Actions → Run workflow). Job czeka na zatwierdzenie w środowisku „live” (required reviewer: Kaj).
+# Repo publiczne: brak planów, list aukcji, danych klientów i logów operacyjnych. Plan pobierany z prywatnego repo po hashu.
+on:
+  workflow_dispatch:
+    inputs:
+      plan_sha256:
+        description: "sha256 zatwierdzonego planu (64 znaki hex)"
+        required: true
+      rodzaj:
+        description: "ceny | notatki"
+        required: true
+        default: notatki
+      liczba_pozycji:
+        description: "liczba pozycji planu (1-50)"
+        required: true
+      kod_sha:
+        description: "commit SHA kodu bramki, który zatwierdzasz (40 znaków)"
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: live
+  cancel-in-progress: false
+jobs:
+  wykonaj:
+    runs-on: ubuntu-latest
+    environment: live
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wykonanie (logi tylko liczby)
+        env:
+          PLAN_SHA256: ${{ inputs.plan_sha256 }}
+          RODZAJ: ${{ inputs.rodzaj }}
+          LICZBA: ${{ inputs.liczba_pozycji }}
+          KOD_SHA: ${{ inputs.kod_sha }}
+          EBAY_APP_ID: ${{ secrets.EBAY_APP_ID }}
+          EBAY_CERT_ID: ${{ secrets.EBAY_CERT_ID }}
+          EBAY_REFRESH_TOKEN: ${{ secrets.EBAY_REFRESH_TOKEN }}
+          REPO_B_TOKEN: ${{ secrets.REPO_B_TOKEN }}
+          REPO_B: ${{ vars.REPO_B }}
+        run: python3 skrypty/wykonaj.py
